@@ -31,6 +31,8 @@ const char gprsPass[] = "";
 
 #include <TinyGsmClient.h>
 
+#define DUMP_AT_COMMANDS
+
 #ifdef DUMP_AT_COMMANDS
   #include <StreamDebugger.h>
   StreamDebugger debugger(SerialAT, SerialMon);

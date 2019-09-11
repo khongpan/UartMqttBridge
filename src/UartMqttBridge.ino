@@ -1,7 +1,10 @@
 //https://icircuit.net/arduino-getting-started-mqtt-using-esp32/2138
+#include <Arduino.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include "Network.h"
+
+#define SerialCon Serial2
 
 
 // Update these with values suitable for your network.
@@ -12,8 +15,8 @@ const char* mqtt_server = "203.150.107.106";
 #define mqtt_port 1883
 #define MQTT_USER ""
 #define MQTT_PASSWORD ""
-#define MQTT_SERIAL_PUBLISH_CH "CASSAVA-DEMO-01/rx"
-#define MQTT_SERIAL_RECEIVER_CH "CASSAVA-DEMO-01/tx"
+#define MQTT_SERIAL_PUBLISH_CH "CASSAVA-DEMO-01/tx"
+#define MQTT_SERIAL_RECEIVER_CH "CASSAVA-DEMO-01/rx"
 
 //WiFiClient wifiClient;
 
@@ -31,7 +34,7 @@ void mqtt_connect() {
     if (pubsubClient.connect(clientId.c_str(),MQTT_USER,MQTT_PASSWORD)) {
       Serial.println("connected");
       //Once connected, publish an announcement...
-      pubsubClient.publish("/post-it", "hello world");
+      pubsubClient.publish("/post-it", "reboot");
       // ... and resubscribe
       pubsubClient.subscribe(MQTT_SERIAL_RECEIVER_CH);
     } else {
@@ -52,11 +55,15 @@ void callback(char* topic, byte *payload, unsigned int length) {
     Serial.print("data:");  
     Serial.write(payload, length);
     Serial.println();
+    SerialCon.write(payload, length);
 }
 
 void setup() {
   Serial.begin(115200);
   Serial.setTimeout(500);// Set time out for
+  SerialCon.begin(38400,SERIAL_8E1,18,23);
+  SerialCon.setTimeout(500);
+  
   Net.PowerOn();
   Net.Connect();
  
@@ -74,6 +81,7 @@ void publishSerialData(char *serialData){
 }
 
 int loop_cnt=0;
+int send_cnt=0;
 void loop() {
 
 
@@ -81,15 +89,19 @@ void loop() {
     //Net.Connect();
     //Net.HttpGet();
    pubsubClient.loop();
-   if (Serial.available() > 0) {
+   if (SerialCon.available() > 0) {
      char bfr[501];
      memset(bfr,0, 501);
-     Serial.readBytesUntil( '\n',bfr,500);
+     SerialCon.readBytesUntil( '\n',bfr,500);
      publishSerialData(bfr);
    }
    char msg[20] ;
-   sprintf(msg,"test %ld\r\n",loop_cnt);
-   if(loop_cnt++%500000 == 0) publishSerialData(msg);
+   
+   if(loop_cnt++%500000 == 0) {
+     send_cnt++;
+     sprintf(msg,"test %ld\r\n",send_cnt);
+     //publishSerialData(msg);
+   }
     //Net.Disconnect();
     //Net.PowerOff();
 
