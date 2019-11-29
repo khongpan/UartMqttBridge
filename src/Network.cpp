@@ -8,7 +8,7 @@
 //#define DUMP_AT_COMMANDS
 
 // Define the serial console for debug prints, if needed
-#define TINY_GSM_DEBUG SerialMon
+//#define TINY_GSM_DEBUG SerialMon
 
 // Range to attempt to autobaud
 #define GSM_AUTOBAUD_MIN 9600
@@ -31,7 +31,7 @@ const char gprsPass[] = "";
 
 #include <TinyGsmClient.h>
 
-#define DUMP_AT_COMMANDS
+//#define DUMP_AT_COMMANDS
 
 #ifdef DUMP_AT_COMMANDS
   #include <StreamDebugger.h>
@@ -56,6 +56,7 @@ Network::~Network() {
  const int  port = 80;
  TinyGsmClient client(modem);
  HttpClient http(client, server, port);
+ unsigned long last_maintain_t = 0;
 
 
 Client *Network::GetClient() {
@@ -115,9 +116,9 @@ void Network::HttpGet() {
 void Network::Setup() {
 
   // Set GSM module baud rate
-  TinyGsmAutoBaud(SerialAT,GSM_AUTOBAUD_MIN,GSM_AUTOBAUD_MAX);
+  //TinyGsmAutoBaud(SerialAT,GSM_AUTOBAUD_MIN,GSM_AUTOBAUD_MAX);
   //SerialAT.begin(9600);
-  delay(3000);
+  //delay(3000);
 }
 
 
@@ -165,7 +166,18 @@ void Network::Disconnect() {
 }
 
 void Network::Maintain() {
-  modem.maintain();
+ 
+
+
+  if (millis()>(last_maintain_t+5000)) {
+    modem.maintain();
+    if(modem.isGprsConnected()==false) {
+      PowerOff();
+      PowerOn();
+      Connect();
+    }
+  }
+  last_maintain_t=millis();
 }
 
 void Network::PowerOn() {
@@ -173,6 +185,7 @@ void Network::PowerOn() {
   // Restart takes quite some time
   // To skip it, call init() instead of restart()
   DBG("Initializing modem...");
+  TinyGsmAutoBaud(SerialAT,GSM_AUTOBAUD_MIN,GSM_AUTOBAUD_MAX);
   //if (!modem.restart()) {
   if (!modem.init()) {
     DBG("Failed to restart modem, delaying 10s and retrying");
